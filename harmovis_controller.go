@@ -13,11 +13,13 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/docker/docker/client"
 )
 
 var (
 	hvLayersCmd *exec.Cmd
+	dockerClient *client.Client
 )
 
 func init(){
@@ -32,6 +34,37 @@ func init(){
 
 
 }
+
+func runNodeSrv(){
+	ctx := context.Background()
+	// Network config
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	endpointsConfig["synerex-network"] = &network.EndpointSettings{
+		NetworkID: "synerex-network",
+	}
+	cmdSlice := []string{"-addr","0.0.0.0"}
+	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
+			Image: "synerex/nodeserv",
+			Cmd: cmdSlice,
+		}, &container.HostConfig{
+			AutoRemove: true,
+		}, &network.NetworkingConfig{
+			EndpointsConfig: endpointsConfig,
+		}, nil, "geo")
+	if err != nil {
+		panic(err)
+	}
+	if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+	
+}
+
+
+func runSxServ(){
+
+}
+
 
 func runGeoDockerWithOSExec(cmds ...string){
 	baseCmd := []string{"run","--network","synerex-network","synerex_geography","-nodesrv","nodeserv:9990"}
@@ -108,6 +141,42 @@ func runChRetrive(cmds ...string){
 	}
 }
 
+func harmoVIS(cmds ...string){
+	ctx := context.Background()
+	// Network config
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	endpointsConfig["synerex-network"] = &network.EndpointSettings{
+		NetworkID: "synerex-network",
+	}
+	cmdSlice := []string{"-nodesrv","nodeserv:9990"}
+	cmdSlice = append(cmdSlice,cmds...)
+	portMap := nat.PortMap{}
+	portSet := nat.PortSet{ "10080/tcp": struct{}{}}
+	portMap["10080/tcp"]=[]nat.PortBinding{
+		nat.PortBinding{
+			HostIP: "0.0.0.0",
+			HostPort: "10090",
+		},
+	}
+	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
+			Image: "synerex/harmovis_layers",
+			Cmd: cmdSlice,
+			ExposedPorts: portSet,
+		}, &container.HostConfig{
+			AutoRemove: true,
+			PortBindings: portMap,
+			PublishAllPorts: true,
+		}, &network.NetworkingConfig{
+			EndpointsConfig: endpointsConfig,
+		}, nil, "harmovis_layers")
+	if err != nil {
+		panic(err)
+	}
+	if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+}
+
 
 func runDemo(c echo.Context)error{
 //	log.Print("runDemo! %v",c)
@@ -155,11 +224,12 @@ func getMapboxToken(c echo.Context)error{
 	// need to start harmovis-layers!
 	if strings.HasPrefix(mbtoken,"pk.") && hvLayersCmd == nil {
 //		hvLayersCmd = exec.Command("./harmovis-layers","-port", "10090", "-mapbox", mbtoken)
-        hvLayersCmd = exec.Command("docker","run","--rm","--network","synerex-network","-p","10090:10080","harmovis_layers","-nodesrv","nodeserv:9990","-mapbox",mbtoken)
-		err := hvLayersCmd.Start()
-		if err != nil {
-			log.Fatal("Can't start harmovis_layers docker",err)
-		}
+//        hvLayersCmd = exec.Command("docker","run","--rm","--network","synerex-network","-p","10090:10080","harmovis_layers","-nodesrv","nodeserv:9990","-mapbox",mbtoken)
+//		err := hvLayersCmd.Start()
+		harmoVIS()
+//		if err != nil {
+//			log.Fatal("Can't start harmovis_layers docker",err)
+//		}
 		return	c.Redirect(http.StatusMovedPermanently, "control.html")
 	}
 //	return	c.HTML(http.StatusOK, "<HTML></HTML>")
