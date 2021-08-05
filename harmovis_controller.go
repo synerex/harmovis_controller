@@ -258,6 +258,91 @@ func createSynerexNetwork() {
 	}
 }
 
+func isRunning(containerName string) []types.Container {
+	filtMap := map[string][]string{"name": {containerName}}
+	filtBytes, _ := json.Marshal(filtMap)
+	filt, _ := filters.FromJSON(string(filtBytes))
+
+	opts := types.ContainerListOptions{
+		All:     false,
+		Quiet:   false,
+		Filters: filt,
+	}
+	resp, err := dockerClient.ContainerList(context.TODO(), opts)
+	if err != nil {
+		log.Fatalf("Can't obtain container list: %v", err)
+	}
+	return resp
+}
+
+func startNodeServ() {
+	// check running container with same-name..
+	resp0 := isRunning("nodeserv")
+	if len(resp0) > 0 {
+		log.Printf("nodeserv is running")
+		return
+	}
+
+	ctx := context.Background()
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	endpointsConfig["synerex-network"] = &network.EndpointSettings{
+		NetworkID: "synerex-network",
+	}
+
+	cmdSlice := []string{"-addr", "0.0.0.0"}
+	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
+		Image: "synerex/nodeserv",
+		Cmd:   cmdSlice,
+	}, &container.HostConfig{
+		AutoRemove: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "nodeserv")
+	if err != nil {
+		log.Print("docker create err:", err)
+	} else {
+		if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+			log.Print("docker start err:", err)
+		}
+	}
+}
+
+func startContainer(contName string) {
+
+}
+
+func startSynerexServ() {
+	// check running container with same-name..
+	resp0 := isRunning("sxserv")
+	if len(resp0) > 0 {
+		log.Printf("sxserv is running")
+		return
+	}
+
+	ctx := context.Background()
+	endpointsConfig := make(map[string]*network.EndpointSettings)
+	endpointsConfig["synerex-network"] = &network.EndpointSettings{
+		NetworkID: "synerex-network",
+	}
+
+	cmdSlice := []string{"-nodeaddr", "nodeserv"}
+	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
+		Image: "synerex/sxserv",
+		Cmd:   cmdSlice,
+	}, &container.HostConfig{
+		AutoRemove: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "sxserv")
+	if err != nil {
+		log.Print("docker create err:", err)
+	} else {
+		if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+			log.Print("docker start err:", err)
+		}
+	}
+}
+
 func main() {
 
 	e := echo.New()
@@ -266,6 +351,9 @@ func main() {
 	if len(nets) == 0 {
 		createSynerexNetwork()
 	}
+	startNodeServ()
+
+	startSynerexServ()
 
 	e.Static("/", "static")
 
