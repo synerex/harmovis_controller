@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"encoding/json"
 	"log"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -12,99 +13,96 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 var (
-	hvLayersCmd *exec.Cmd
+	hvLayersCmd  *exec.Cmd
 	dockerClient *client.Client
 )
 
-func init(){
+func init() {
 	dclt, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err == nil {
 		dockerClient = dclt
-	}else{
+	} else {
 		log.Fatal("Can't use docker..")
 	}
 
 	// check synerex-network
 
-
 }
 
-func runNodeSrv(){
+func runNodeSrv() {
 	ctx := context.Background()
 	// Network config
 	endpointsConfig := make(map[string]*network.EndpointSettings)
 	endpointsConfig["synerex-network"] = &network.EndpointSettings{
 		NetworkID: "synerex-network",
 	}
-	cmdSlice := []string{"-addr","0.0.0.0"}
+	cmdSlice := []string{"-addr", "0.0.0.0"}
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-			Image: "synerex/nodeserv",
-			Cmd: cmdSlice,
-		}, &container.HostConfig{
-			AutoRemove: true,
-		}, &network.NetworkingConfig{
-			EndpointsConfig: endpointsConfig,
-		}, nil, "geo")
+		Image: "synerex/nodeserv",
+		Cmd:   cmdSlice,
+	}, &container.HostConfig{
+		AutoRemove: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "geo")
 	if err != nil {
 		panic(err)
 	}
 	if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
-	
-}
-
-
-func runSxServ(){
 
 }
 
+func runSxServ() {
 
-func runGeoDockerWithOSExec(cmds ...string){
-	baseCmd := []string{"run","--network","synerex-network","synerex_geography","-nodesrv","nodeserv:9990"}
+}
+
+func runGeoDockerWithOSExec(cmds ...string) {
+	baseCmd := []string{"run", "--network", "synerex-network", "synerex_geography", "-nodesrv", "nodeserv:9990"}
 	cc := append(baseCmd, cmds...)
-	geoCmd := exec.Command("docker",cc...)
+	geoCmd := exec.Command("docker", cc...)
 	err := geoCmd.Start()
 	if err != nil {
-		log.Fatal("Can't start geo-provider docker",err)
+		log.Fatal("Can't start geo-provider docker", err)
 	}
 }
 
-func runGeoDocker(cmds ...string){
+func runGeoDocker(cmds ...string) {
 
-	baseCmd := []string{"run","--network","synerex-network","synerex_geography","-nodesrv","nodeserv:9990"}
+	baseCmd := []string{"run", "--network", "synerex-network", "synerex_geography", "-nodesrv", "nodeserv:9990"}
 	cc := append(baseCmd, cmds...)
-	geoCmd := exec.Command("docker",cc...)
+	geoCmd := exec.Command("docker", cc...)
 	err := geoCmd.Start()
 	if err != nil {
-		log.Fatal("Can't start geo-provider docker",err)
+		log.Fatal("Can't start geo-provider docker", err)
 	}
 }
 
-
-func runGeo(cmds ...string){
+func runGeo(cmds ...string) {
 	ctx := context.Background()
 	// Network config
 	endpointsConfig := make(map[string]*network.EndpointSettings)
 	endpointsConfig["synerex-network"] = &network.EndpointSettings{
 		NetworkID: "synerex-network",
 	}
-	cmdSlice := []string{"-nodesrv","nodeserv:9990"}
-	cmdSlice = append(cmdSlice,cmds...)
+	cmdSlice := []string{"-nodesrv", "nodeserv:9990"}
+	cmdSlice = append(cmdSlice, cmds...)
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-			Image: "synerex/geo_with_data",
-			Cmd: cmdSlice,
-		}, &container.HostConfig{
-			AutoRemove: true,
-		}, &network.NetworkingConfig{
-			EndpointsConfig: endpointsConfig,
-		}, nil, "geo")
+		Image: "synerex/geo_with_data",
+		Cmd:   cmdSlice,
+	}, &container.HostConfig{
+		AutoRemove: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "geo")
 	if err != nil {
 		panic(err)
 	}
@@ -112,8 +110,8 @@ func runGeo(cmds ...string){
 		panic(err)
 	}
 }
-	
-func runChRetrive(cmds ...string){
+
+func runChRetrive(cmds ...string) {
 	ctx := context.Background()
 	// Network config
 	endpointsConfig := make(map[string]*network.EndpointSettings)
@@ -121,54 +119,54 @@ func runChRetrive(cmds ...string){
 		NetworkID: "synerex-network",
 	}
 
-	cmdSlice := []string{"-nodesrv","nodeserv:9990"}
-	cmdSlice = append(cmdSlice,cmds...)
+	cmdSlice := []string{"-nodesrv", "nodeserv:9990"}
+	cmdSlice = append(cmdSlice, cmds...)
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-			Image: "synerex/geo_with_data",
-			Entrypoint: []string{"/sxbin/channel_retrieve"},
-			Cmd: cmdSlice,
-		}, &container.HostConfig{
-			AutoRemove: true,
-		}, &network.NetworkingConfig{
-			EndpointsConfig: endpointsConfig,
-		}, nil, "chan_retrieve")
+		Image:      "synerex/geo_with_data",
+		Entrypoint: []string{"/sxbin/channel_retrieve"},
+		Cmd:        cmdSlice,
+	}, &container.HostConfig{
+		AutoRemove: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "chan_retrieve")
 	if err != nil {
-		log.Print("docker create err:",err)
-	}else{
+		log.Print("docker create err:", err)
+	} else {
 		if err := dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-			log.Print("docker start err:",err)
+			log.Print("docker start err:", err)
 		}
 	}
 }
 
-func harmoVIS(cmds ...string){
+func harmoVIS(cmds ...string) {
 	ctx := context.Background()
 	// Network config
 	endpointsConfig := make(map[string]*network.EndpointSettings)
 	endpointsConfig["synerex-network"] = &network.EndpointSettings{
 		NetworkID: "synerex-network",
 	}
-	cmdSlice := []string{"-nodesrv","nodeserv:9990"}
-	cmdSlice = append(cmdSlice,cmds...)
+	cmdSlice := []string{"-nodesrv", "nodeserv:9990"}
+	cmdSlice = append(cmdSlice, cmds...)
 	portMap := nat.PortMap{}
-	portSet := nat.PortSet{ "10080/tcp": struct{}{}}
-	portMap["10080/tcp"]=[]nat.PortBinding{
+	portSet := nat.PortSet{"10080/tcp": struct{}{}}
+	portMap["10080/tcp"] = []nat.PortBinding{
 		nat.PortBinding{
-			HostIP: "0.0.0.0",
+			HostIP:   "0.0.0.0",
 			HostPort: "10090",
 		},
 	}
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-			Image: "synerex/harmovis_layers",
-			Cmd: cmdSlice,
-			ExposedPorts: portSet,
-		}, &container.HostConfig{
-			AutoRemove: true,
-			PortBindings: portMap,
-			PublishAllPorts: true,
-		}, &network.NetworkingConfig{
-			EndpointsConfig: endpointsConfig,
-		}, nil, "harmovis_layers")
+		Image:        "synerex/harmovis_layers",
+		Cmd:          cmdSlice,
+		ExposedPorts: portSet,
+	}, &container.HostConfig{
+		AutoRemove:      true,
+		PortBindings:    portMap,
+		PublishAllPorts: true,
+	}, &network.NetworkingConfig{
+		EndpointsConfig: endpointsConfig,
+	}, nil, "harmovis_layers")
 	if err != nil {
 		panic(err)
 	}
@@ -177,69 +175,99 @@ func harmoVIS(cmds ...string){
 	}
 }
 
-
-func runDemo(c echo.Context)error{
-//	log.Print("runDemo! %v",c)
+func runDemo(c echo.Context) error {
+	//	log.Print("runDemo! %v",c)
 	runGeo("-geojson", "higashiyama_facility.geojson", "-webmercator")
-	time.Sleep(500* time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	runGeo("-lines", "higashiyama_line.geojson", "-webmercator")
-	time.Sleep(500* time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
 
-	return	c.Redirect(http.StatusMovedPermanently, "control.html")
+	return c.Redirect(http.StatusMovedPermanently, "control.html")
 }
 
-func runDemo2(c echo.Context)error{
+func runDemo2(c echo.Context) error {
 	//	uv, _ :=c.FormParams()
-	log.Print("runDemo2! %v",c)
+	log.Print("runDemo2! %v", c)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
-	
-	runChRetrive("-channel","13","-sendfile", "higashi-sim.csv")
-	time.Sleep(500* time.Millisecond)
+
+	runChRetrive("-channel", "13", "-sendfile", "higashi-sim.csv")
+	time.Sleep(500 * time.Millisecond)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
-	
-	return	c.Redirect(http.StatusMovedPermanently, "control.html")
+
+	return c.Redirect(http.StatusMovedPermanently, "control.html")
 }
 
-func runCovid(c echo.Context)error{
-	runChRetrive("-channel","14","-sendfile", "aichi-covid-19.csv", "-speed", "1.2")
-	
-	return	c.Redirect(http.StatusMovedPermanently, "control.html")
+func runCovid(c echo.Context) error {
+	runChRetrive("-channel", "14", "-sendfile", "aichi-covid-19.csv", "-speed", "1.2")
+
+	return c.Redirect(http.StatusMovedPermanently, "control.html")
 }
-	
-func runMesh(c echo.Context)error{
-	runChRetrive("-channel","14","-sendfile", "meshDemo.csv", "-speed", "-450")
-	return	c.Redirect(http.StatusMovedPermanently, "control.html")
+
+func runMesh(c echo.Context) error {
+	runChRetrive("-channel", "14", "-sendfile", "meshDemo.csv", "-speed", "-450")
+	return c.Redirect(http.StatusMovedPermanently, "control.html")
 }
-	
 
-	
-
-
-
-func getMapboxToken(c echo.Context)error{
+func getMapboxToken(c echo.Context) error {
 	mbtoken := c.FormValue("mbtoken")
-	log.Printf("got mapbox: %s",mbtoken)
+	log.Printf("got mapbox: %s", mbtoken)
 
 	// need to start harmovis-layers!
-	if strings.HasPrefix(mbtoken,"pk.") && hvLayersCmd == nil {
-//		hvLayersCmd = exec.Command("./harmovis-layers","-port", "10090", "-mapbox", mbtoken)
-//        hvLayersCmd = exec.Command("docker","run","--rm","--network","synerex-network","-p","10090:10080","harmovis_layers","-nodesrv","nodeserv:9990","-mapbox",mbtoken)
-//		err := hvLayersCmd.Start()
+	if strings.HasPrefix(mbtoken, "pk.") && hvLayersCmd == nil {
+		//		hvLayersCmd = exec.Command("./harmovis-layers","-port", "10090", "-mapbox", mbtoken)
+		//        hvLayersCmd = exec.Command("docker","run","--rm","--network","synerex-network","-p","10090:10080","harmovis_layers","-nodesrv","nodeserv:9990","-mapbox",mbtoken)
+		//		err := hvLayersCmd.Start()
 		harmoVIS()
-//		if err != nil {
-//			log.Fatal("Can't start harmovis_layers docker",err)
-//		}
-		return	c.Redirect(http.StatusMovedPermanently, "control.html")
+		//		if err != nil {
+		//			log.Fatal("Can't start harmovis_layers docker",err)
+		//		}
+		return c.Redirect(http.StatusMovedPermanently, "control.html")
 	}
-//	return	c.HTML(http.StatusOK, "<HTML></HTML>")
-	return	c.Redirect(http.StatusMovedPermanently, "/index.html")
+	//	return	c.HTML(http.StatusOK, "<HTML></HTML>")
+	return c.Redirect(http.StatusMovedPermanently, "/index.html")
 }
 
-func main(){
+func getNetworks() []types.NetworkResource {
+	filtMap := map[string][]string{"name": {"synerex-network"}}
+	filtBytes, _ := json.Marshal(filtMap)
+	filt, err := filters.FromJSON(string(filtBytes))
+	if err != nil {
+		log.Fatalf("Can't filter networks: %v", err)
+	}
+	opts := types.NetworkListOptions{Filters: filt}
+	nets, err := dockerClient.NetworkList(context.TODO(), opts)
+	if err != nil {
+		log.Fatal("Can't list networks: %v", err)
+	}
+	log.Printf("%v", nets)
+	return nets
+}
+
+// create docker network...
+func createSynerexNetwork() {
+	// need to check there are already synerex-network
+
+	opts := types.NetworkCreate{
+		IPAM: &network.IPAM{
+			Config: []network.IPAMConfig{},
+		},
+	}
+	if _, err := dockerClient.NetworkCreate(context.TODO(), "synerex-network", opts); err != nil {
+		log.Fatalf("Can't create synerex-network: %v", err)
+	}
+}
+
+func main() {
 
 	e := echo.New()
-	e.Static("/","static")
+
+	nets := getNetworks()
+	if len(nets) == 0 {
+		createSynerexNetwork()
+	}
+
+	e.Static("/", "static")
 
 	e.POST("/mapbox", getMapboxToken)
 	e.POST("/demo", runDemo)
@@ -248,7 +276,5 @@ func main(){
 	e.POST("/covid", runCovid)
 
 	e.Logger.Fatal(e.Start(":10101"))
-
-
 
 }
