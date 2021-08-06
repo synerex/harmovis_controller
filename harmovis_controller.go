@@ -102,7 +102,7 @@ func runGeo(cmds ...string) {
 		AutoRemove: true,
 	}, &network.NetworkingConfig{
 		EndpointsConfig: endpointsConfig,
-	}, nil, "geo")
+	}, nil, "")
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +129,7 @@ func runChRetrive(cmds ...string) {
 		AutoRemove: true,
 	}, &network.NetworkingConfig{
 		EndpointsConfig: endpointsConfig,
-	}, nil, "chan_retrieve")
+	}, nil, "")
 	if err != nil {
 		log.Print("docker create err:", err)
 	} else {
@@ -177,9 +177,9 @@ func harmoVIS(mbtoken string) {
 func runDemo(c echo.Context) error {
 	//	log.Print("runDemo! %v",c)
 	runGeo("-geojson", "higashiyama_facility.geojson", "-webmercator")
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 	runGeo("-lines", "higashiyama_line.geojson", "-webmercator")
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
 
 	return c.Redirect(http.StatusMovedPermanently, "control.html")
@@ -191,7 +191,7 @@ func runDemo2(c echo.Context) error {
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
 
 	runChRetrive("-channel", "13", "-sendfile", "higashi-sim.csv")
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
 
 	return c.Redirect(http.StatusMovedPermanently, "control.html")
