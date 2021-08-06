@@ -139,15 +139,14 @@ func runChRetrive(cmds ...string) {
 	}
 }
 
-func harmoVIS(cmds ...string) {
+func harmoVIS(mbtoken string) {
 	ctx := context.Background()
 	// Network config
 	endpointsConfig := make(map[string]*network.EndpointSettings)
 	endpointsConfig["synerex-network"] = &network.EndpointSettings{
 		NetworkID: "synerex-network",
 	}
-	cmdSlice := []string{"-nodesrv", "nodeserv:9990"}
-	cmdSlice = append(cmdSlice, cmds...)
+	cmdSlice := []string{"-nodesrv", "nodeserv:9990", "-mapbox", mbtoken}
 	portMap := nat.PortMap{}
 	portSet := nat.PortSet{"10080/tcp": struct{}{}}
 	portMap["10080/tcp"] = []nat.PortBinding{
@@ -218,7 +217,7 @@ func getMapboxToken(c echo.Context) error {
 		//		hvLayersCmd = exec.Command("./harmovis-layers","-port", "10090", "-mapbox", mbtoken)
 		//        hvLayersCmd = exec.Command("docker","run","--rm","--network","synerex-network","-p","10090:10080","harmovis_layers","-nodesrv","nodeserv:9990","-mapbox",mbtoken)
 		//		err := hvLayersCmd.Start()
-		harmoVIS()
+		harmoVIS(mbtoken)
 		//		if err != nil {
 		//			log.Fatal("Can't start harmovis_layers docker",err)
 		//		}
@@ -289,12 +288,26 @@ func startNodeServ() {
 		NetworkID: "synerex-network",
 	}
 
+	portMap := nat.PortMap{}
+	portSet := nat.PortSet{"9990/tcp": struct{}{}}
+	portMap["9990/tcp"] = []nat.PortBinding{
+		nat.PortBinding{
+			HostIP:   "0.0.0.0",
+			HostPort: "9990",
+		},
+	}
+
+	
+
 	cmdSlice := []string{"-addr", "0.0.0.0"}
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
 		Image: "synerex/nodeserv",
 		Cmd:   cmdSlice,
+		ExposedPorts: portSet,
 	}, &container.HostConfig{
 		AutoRemove: true,
+		PortBindings:    portMap,
+		PublishAllPorts: true,
 	}, &network.NetworkingConfig{
 		EndpointsConfig: endpointsConfig,
 	}, nil, "nodeserv")
@@ -324,13 +337,24 @@ func startSynerexServ() {
 	endpointsConfig["synerex-network"] = &network.EndpointSettings{
 		NetworkID: "synerex-network",
 	}
+	portMap := nat.PortMap{}
+	portSet := nat.PortSet{"10000/tcp": struct{}{}}
+	portMap["10000/tcp"] = []nat.PortBinding{
+		nat.PortBinding{
+			HostIP:   "0.0.0.0",
+			HostPort: "10000",
+		},
+	}
 
 	cmdSlice := []string{"-nodeaddr", "nodeserv"}
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
 		Image: "synerex/sxserv",
 		Cmd:   cmdSlice,
+		ExposedPorts: portSet,
 	}, &container.HostConfig{
 		AutoRemove: true,
+		PortBindings:    portMap,
+		PublishAllPorts: true,
 	}, &network.NetworkingConfig{
 		EndpointsConfig: endpointsConfig,
 	}, nil, "sxserv")
