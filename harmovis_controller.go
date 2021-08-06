@@ -177,9 +177,9 @@ func harmoVIS(mbtoken string) {
 func runDemo(c echo.Context) error {
 	//	log.Print("runDemo! %v",c)
 	runGeo("-geojson", "higashiyama_facility.geojson", "-webmercator")
-	time.Sleep(1500 * time.Millisecond)
-	runGeo("-lines", "higashiyama_line.geojson", "-webmercator")
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
+	//	runGeo("-lines", "higashiyama_line.geojson", "-webmercator")
+	//	time.Sleep(300 * time.Millisecond)
 	runGeo("-viewState", "35.15596582695651,136.9783370942177,16")
 
 	return c.Redirect(http.StatusMovedPermanently, "control.html")
@@ -207,6 +207,11 @@ func runMesh(c echo.Context) error {
 	runChRetrive("-channel", "14", "-sendfile", "meshDemo.csv", "-speed", "-450")
 	return c.Redirect(http.StatusMovedPermanently, "control.html")
 }
+
+func redirectControl(c echo.Context) error {
+	return c.Redirect(http.StatusMovedPermanently, "control.html")
+}
+
 
 func getMapboxToken(c echo.Context) error {
 	mbtoken := c.FormValue("mbtoken")
@@ -346,7 +351,7 @@ func startSynerexServ() {
 		},
 	}
 
-	cmdSlice := []string{"-nodeaddr", "nodeserv"}
+	cmdSlice := []string{"-nodeaddr", "nodeserv", "-servaddr", "sxserv"}
 	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
 		Image: "synerex/sxserv",
 		Cmd:   cmdSlice,
@@ -379,9 +384,18 @@ func main() {
 
 	startSynerexServ()
 
-	e.Static("/", "static")
+	// check is harmovis_layers is working..
+	resp0 := isRunning("harmovis_layers")
+	if len(resp0) > 0 {
+		log.Printf("harmovis_layers is running")
+		e.POST("/mapbox", redirectControl)
+	}else{
+		e.POST("/mapbox", getMapboxToken)		
+	}
 
-	e.POST("/mapbox", getMapboxToken)
+	e.Static("/", "static")	
+
+
 	e.POST("/demo", runDemo)
 	e.POST("/demo2", runDemo2)
 	e.POST("/mesh", runMesh)
